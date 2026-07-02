@@ -1,0 +1,29 @@
+name: Daily Meeting Reminder
+
+on:
+  schedule:
+    # Run every day at 18:00 UTC (adjust as needed for local timezone)
+    - cron: '0 18 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  send_reminders:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run script to send reminders
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          GOOGLE_TOKEN_JSON: ${{ secrets.GOOGLE_TOKEN_JSON }}
+        run: python send_reminders.py
