@@ -55,20 +55,32 @@ def get_tomorrows_events(calendar_service):
         singleEvents=True, orderBy='startTime').execute()
     return events_result.get('items', [])
 
-def check_if_first_meeting(calendar_service, attendee_email, start_of_tomorrow):
+def check_if_first_meeting(calendar_service, attendee_email, start_of_tomorrow, current_event_id):
     # Check if this email was an attendee in any past events before tomorrow
-    # We query events up to start_of_tomorrow with this attendee's email in the search query (q=email)
-    # This is a heuristic. A more robust way is to fetch events and check attendees.
     events_result = calendar_service.events().list(
         calendarId='primary', q=attendee_email, timeMax=start_of_tomorrow,
         singleEvents=True).execute()
 
     past_events = events_result.get('items', [])
     for event in past_events:
+        # Ignore the exact event we are currently evaluating, to avoid false positives
+        if event.get('id') == current_event_id:
+            continue
+
+        # Ignore cancelled events
+        if event.get('status') == 'cancelled':
+            continue
+
         attendees = event.get('attendees', [])
         for attendee in attendees:
             if attendee.get('email', '').lower() == attendee_email.lower():
+                # Ignore if the attendee declined the past event
+                if attendee.get('responseStatus') == 'declined':
+                    continue
+
                 # Found a past event with this attendee
+                event_date = event.get('start', {}).get('dateTime') or event.get('start', {}).get('date')
+                print(f"  -> Encontrada reunião anterior para {attendee_email}: '{event.get('summary')}' a {event_date}")
                 return False
 
     return True
@@ -143,6 +155,7 @@ def main():
 
     for event in events:
         print(f"Processing event: {event.get('summary')} at {event.get('start', {}).get('dateTime')}")
+        event_id = event.get('id')
         event_link = event.get('htmlLink', 'https://calendar.google.com/')
         attendees = event.get('attendees', [])
 
@@ -154,7 +167,7 @@ def main():
             print(f"Checking attendee: {email}")
 
             # Check if this is the first meeting with this attendee
-            is_first = check_if_first_meeting(calendar_service, email, start_of_tomorrow)
+            is_first = check_if_first_meeting(calendar_service, email, start_of_tomorrow, event_id)
 
             if is_first:
                 print(f"First meeting detected for {email}. Sending reminder.")
