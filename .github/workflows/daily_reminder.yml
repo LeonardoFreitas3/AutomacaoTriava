@@ -2,8 +2,8 @@ name: Daily Meeting Reminder
 
 on:
   schedule:
-    # Run every day at 18:00 UTC (adjust as needed for local timezone)
-    - cron: '0 18 * * *'
+    # Corre todos os dias às 08:00 UTC (que corresponde às 09:00 em Portugal Continental durante o horário de verão e 08:00 no horário de inverno)
+    - cron: '0 8 * * *'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
