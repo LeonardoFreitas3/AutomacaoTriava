@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import glob
 import datetime
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -118,9 +119,11 @@ Até breve!"""
     message['From'] = MY_EMAIL
     message['Subject'] = 'É amanhã a nossa primeira conversa!'
 
-    # Attach the PDF
-    attachment_path = 'apresentacao_triava.pdf'
-    if os.path.exists(attachment_path):
+    # Attach the first PDF found in the root directory
+    pdf_files = glob.glob('*.pdf')
+    if pdf_files:
+        attachment_path = pdf_files[0]
+        print(f"  -> A anexar documento: {attachment_path}")
         with open(attachment_path, 'rb') as f:
             pdf_data = f.read()
         message.add_attachment(
@@ -129,6 +132,8 @@ Até breve!"""
             subtype='pdf',
             filename=os.path.basename(attachment_path)
         )
+    else:
+        print("  -> Aviso: Nenhum ficheiro PDF encontrado na pasta para anexar.")
 
     # Encode message
     encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
