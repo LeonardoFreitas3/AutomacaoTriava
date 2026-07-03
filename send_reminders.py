@@ -62,9 +62,22 @@ def check_if_first_meeting(calendar_service, attendee_email, start_of_tomorrow, 
         singleEvents=True).execute()
 
     past_events = events_result.get('items', [])
+
+    # Base ID of current event, useful for recurring events where ID is `baseId_instanceDate`
+    current_base_id = current_event_id.split('_')[0] if current_event_id else None
+
+    print(f"  [DEBUG] Eventos encontrados na pesquisa para {attendee_email}: {len(past_events)}")
+
     for event in past_events:
-        # Ignore the exact event we are currently evaluating, to avoid false positives
-        if event.get('id') == current_event_id:
+        event_id = event.get('id', '')
+        base_id = event_id.split('_')[0]
+        event_summary = event.get('summary', 'Sem Título')
+        event_date = event.get('start', {}).get('dateTime') or event.get('start', {}).get('date')
+
+        print(f"    -> Analisando evento: '{event_summary}' a {event_date} (ID: {event_id})")
+
+        # Ignore the exact event we are currently evaluating, including instances of the same recurring event
+        if event_id == current_event_id or base_id == current_base_id:
             continue
 
         # Ignore cancelled events
@@ -80,7 +93,7 @@ def check_if_first_meeting(calendar_service, attendee_email, start_of_tomorrow, 
 
                 # Found a past event with this attendee
                 event_date = event.get('start', {}).get('dateTime') or event.get('start', {}).get('date')
-                print(f"  -> Encontrada reunião anterior para {attendee_email}: '{event.get('summary')}' a {event_date}")
+                print(f"  -> Encontrada reunião anterior para {attendee_email}: '{event.get('summary')}' a {event_date} (ID: {event_id})")
                 return False
 
     return True
@@ -154,7 +167,8 @@ def main():
     start_of_tomorrow = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0).isoformat() + 'Z'
 
     for event in events:
-        print(f"Processing event: {event.get('summary')} at {event.get('start', {}).get('dateTime')}")
+        event_start = event.get('start', {}).get('dateTime') or event.get('start', {}).get('date')
+        print(f"Processing event: {event.get('summary')} at {event_start}")
         event_id = event.get('id')
         event_link = event.get('htmlLink', 'https://calendar.google.com/')
         attendees = event.get('attendees', [])
